@@ -42,23 +42,19 @@ def prepare_features(train_df, val_df, test_df):
     return X_train, y_train, X_val, y_val, X_test, y_test, numeric_features
 
 def train_model(X_train, y_train, X_val, y_val):
-    """Train a HistGradientBoosting Regressor model."""
-    print("Training HistGradientBoostingRegressor model...")
+    """Train a LightGBM Regressor model."""
+    from lightgbm import LGBMRegressor
+    print("Training LGBMRegressor model...")
     
-    model = HistGradientBoostingRegressor(
-        loss='absolute_error',
+    model = LGBMRegressor(
+        objective='mae',
         learning_rate=0.05,
         max_depth=6,
-        max_iter=500,
-        early_stopping=True,
-        validation_fraction=None, # we pass our own
+        n_estimators=150,
         random_state=42
     )
     
-    # In sklearn, we can just concat train and val and use a PredefinedSplit, or for simplicity:
-    # We will just train with early stopping on a random internal split for simplicity since HistGBM doesn't easily take explicit eval sets yet without a pipeline trick.
-    # We'll rely on the default early stopping which uses 10% of the training data.
-    model.fit(X_train, y_train)
+    model.fit(X_train, y_train, eval_set=[(X_val, y_val)])
     
     return model
 
