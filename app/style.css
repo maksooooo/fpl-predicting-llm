@@ -1,91 +1,219 @@
-/* style.css - Premium Football Aesthetic */
+/* app/style.css - Premium FPL UI Overhaul */
 
-/* Main background: sleek dark pitch theme */
+/* Import Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Inter:wght@400;600&display=swap');
+
+/* Main Background */
 .stApp {
-    background-color: #0d1b2a; /* Deep dark slate/blue */
-    background-image: radial-gradient(circle at top right, #1b263b, #0d1b2a);
-    color: #e0e1dd;
+    background-color: #050b14;
+    background-image: 
+        radial-gradient(circle at 15% 50%, rgba(0, 255, 135, 0.03), transparent 25%),
+        radial-gradient(circle at 85% 30%, rgba(0, 229, 255, 0.03), transparent 25%);
+    color: #e2e8f0;
     font-family: 'Inter', sans-serif;
 }
 
-/* Custom header */
+/* Headers */
 h1 {
-    color: #00ff87 !important; /* Premier League vibrant green */
+    font-family: 'Outfit', sans-serif !important;
+    color: #ffffff !important;
     font-weight: 800 !important;
-    text-transform: uppercase;
-    letter-spacing: -1px;
+    letter-spacing: -1.5px;
+    font-size: 3rem !important;
+    margin-bottom: 0 !important;
+}
+
+h1 span.highlight {
+    color: #00ff85;
+    text-shadow: 0 0 20px rgba(0, 255, 133, 0.4);
 }
 
 h2, h3 {
+    font-family: 'Outfit', sans-serif !important;
     color: #ffffff !important;
     font-weight: 600 !important;
 }
 
-/* Metric Cards / Glassmorphism */
+/* Scout Card Layout Container */
+.scout-card {
+    background: rgba(20, 25, 35, 0.6);
+    border-radius: 16px;
+    padding: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    margin-bottom: 24px;
+}
+
+/* Metric Cards */
 div[data-testid="stMetric"] {
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    background: rgba(255, 255, 255, 0.02);
     border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    padding: 15px 20px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-    transition: transform 0.2s ease-in-out;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 20px;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: fadeUp 0.6s ease-out forwards;
 }
 
 div[data-testid="stMetric"]:hover {
-    transform: translateY(-5px);
-    border-color: #00ff87;
-    box-shadow: 0 8px 15px rgba(0, 255, 135, 0.1);
+    transform: translateY(-4px);
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(0, 255, 133, 0.3);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2), inset 0 0 0 1px rgba(0, 255, 133, 0.2);
 }
 
 div[data-testid="stMetricValue"] {
-    color: #00ff87 !important;
-    font-weight: 700 !important;
-    font-size: 2.5rem !important;
+    font-family: 'Outfit', sans-serif !important;
+    color: #00ff85 !important;
+    font-weight: 800 !important;
+    font-size: 2.8rem !important;
+    letter-spacing: -1px;
 }
 
 div[data-testid="stMetricLabel"] {
-    color: #a8dadc !important;
+    color: #94a3b8 !important;
     text-transform: uppercase;
-    font-size: 0.9rem !important;
+    font-size: 0.85rem !important;
+    letter-spacing: 1.5px;
+    font-weight: 600 !important;
+    margin-bottom: 8px;
+}
+
+/* Sidebar */
+[data-testid="stSidebar"] {
+    background-color: #0a101a;
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+[data-testid="stSidebar"] h1, 
+[data-testid="stSidebar"] h2, 
+[data-testid="stSidebar"] label {
+    color: #e2e8f0 !important;
+}
+
+/* Buttons */
+.stButton > button {
+    background: linear-gradient(135deg, #00ff85 0%, #00cc6a 100%) !important;
+    color: #050b14 !important;
+    font-family: 'Outfit', sans-serif !important;
+    font-weight: 800 !important;
+    font-size: 1.1rem !important;
+    border-radius: 12px !important;
+    border: none !important;
+    padding: 12px 28px !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    box-shadow: 0 4px 15px rgba(0, 255, 133, 0.2) !important;
+    width: 100%;
+    text-transform: uppercase;
     letter-spacing: 1px;
 }
 
-/* Sidebar styling */
-[data-testid="stSidebar"] {
-    background-color: #1b263b;
-    border-right: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* Primary Button */
-.stButton > button {
-    background-color: #00ff87 !important;
-    color: #0d1b2a !important;
-    font-weight: bold !important;
-    border-radius: 8px !important;
-    border: none !important;
-    padding: 10px 24px !important;
-    transition: all 0.3s ease !important;
-    box-shadow: 0 4px 15px rgba(0, 255, 135, 0.3) !important;
-    width: 100%;
-}
-
 .stButton > button:hover {
-    background-color: #00cc6c !important;
-    box-shadow: 0 6px 20px rgba(0, 255, 135, 0.5) !important;
-    transform: translateY(-2px);
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 8px 25px rgba(0, 255, 133, 0.4) !important;
+    background: linear-gradient(135deg, #1aff94 0%, #00e677 100%) !important;
 }
 
-/* AI Verdict Box */
-.ai-verdict {
-    background: linear-gradient(135deg, rgba(0, 255, 135, 0.1) 0%, rgba(27, 38, 59, 0.5) 100%);
-    border-left: 5px solid #00ff87;
-    padding: 20px;
-    border-radius: 8px;
-    margin-top: 20px;
-    font-size: 1.1rem;
-    line-height: 1.6;
-    color: #f1faee;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+/* AI Verdict Container */
+.ai-verdict-container {
+    animation: scaleIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    margin-top: 24px;
+}
+
+.ai-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    color: #00e5ff;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 600;
+    font-size: 1.2rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.ai-header-icon {
+    font-size: 1.5rem;
+    animation: pulse 2s infinite;
+}
+
+.ai-verdict-box {
+    background: rgba(0, 229, 255, 0.05);
+    border: 1px solid rgba(0, 229, 255, 0.2);
+    border-left: 4px solid #00e5ff;
+    padding: 24px;
+    border-radius: 0 12px 12px 12px;
+    font-size: 1.05rem;
+    line-height: 1.7;
+    color: #e2e8f0;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    position: relative;
+}
+
+/* Progress bar for Gamification */
+.progress-bg {
+    width: 100%;
+    background-color: rgba(255,255,255,0.1);
+    border-radius: 4px;
+    height: 6px;
+    margin-top: 8px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #00ff85, #00e5ff);
+    border-radius: 4px;
+    transition: width 1s ease-out;
+}
+
+/* Player Info Badges */
+.player-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-right: 8px;
+    margin-bottom: 8px;
+}
+
+.badge-team {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.badge-pos {
+    background: rgba(0, 229, 255, 0.15);
+    color: #00e5ff;
+    border: 1px solid rgba(0, 229, 255, 0.3);
+}
+
+/* Animations */
+@keyframes fadeUp {
+    0% { opacity: 0; transform: translateY(20px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scaleIn {
+    0% { opacity: 0; transform: scale(0.95); }
+    100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.1); opacity: 0.7; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* Form Gamification Badges */
+.gamify-icon {
+    font-size: 1.2rem;
+    margin-left: 6px;
+    vertical-align: middle;
 }
