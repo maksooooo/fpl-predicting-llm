@@ -1,0 +1,91 @@
+/* style.css - Premium Football Aesthetic */
+
+/* Main background: sleek dark pitch theme */
+.stApp {
+    background-color: #0d1b2a; /* Deep dark slate/blue */
+    background-image: radial-gradient(circle at top right, #1b263b, #0d1b2a);
+    color: #e0e1dd;
+    font-family: 'Inter', sans-serif;
+}
+
+/* Custom header */
+h1 {
+    color: #00ff87 !important; /* Premier League vibrant green */
+    font-weight: 800 !important;
+    text-transform: uppercase;
+    letter-spacing: -1px;
+}
+
+h2, h3 {
+    color: #ffffff !important;
+    font-weight: 600 !important;
+}
+
+/* Metric Cards / Glassmorphism */
+div[data-testid="stMetric"] {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 15px 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s ease-in-out;
+}
+
+div[data-testid="stMetric"]:hover {
+    transform: translateY(-5px);
+    border-color: #00ff87;
+    box-shadow: 0 8px 15px rgba(0, 255, 135, 0.1);
+}
+
+div[data-testid="stMetricValue"] {
+    color: #00ff87 !important;
+    font-weight: 700 !important;
+    font-size: 2.5rem !important;
+}
+
+div[data-testid="stMetricLabel"] {
+    color: #a8dadc !important;
+    text-transform: uppercase;
+    font-size: 0.9rem !important;
+    letter-spacing: 1px;
+}
+
+/* Sidebar styling */
+[data-testid="stSidebar"] {
+    background-color: #1b263b;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Primary Button */
+.stButton > button {
+    background-color: #00ff87 !important;
+    color: #0d1b2a !important;
+    font-weight: bold !important;
+    border-radius: 8px !important;
+    border: none !important;
+    padding: 10px 24px !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 4px 15px rgba(0, 255, 135, 0.3) !important;
+    width: 100%;
+}
+
+.stButton > button:hover {
+    background-color: #00cc6c !important;
+    box-shadow: 0 6px 20px rgba(0, 255, 135, 0.5) !important;
+    transform: translateY(-2px);
+}
+
+/* AI Verdict Box */
+.ai-verdict {
+    background: linear-gradient(135deg, rgba(0, 255, 135, 0.1) 0%, rgba(27, 38, 59, 0.5) 100%);
+    border-left: 5px solid #00ff87;
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 20px;
+    font-size: 1.1rem;
+    line-height: 1.6;
+    color: #f1faee;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
