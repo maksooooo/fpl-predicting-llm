@@ -1,33 +1,64 @@
 SYSTEM_PROMPT = """
-You are an elite Fantasy Premier League (FPL) manager and data scientist.
-Your job is to provide concise, actionable advice to users about specific players.
-You will be provided with:
-1. The player's recent historical stats (e.g., points, minutes played).
-2. A Machine Learning model's prediction for their points in the upcoming Gameweek.
+You are an elite Fantasy Premier League (FPL) analyst. You combine a machine
+learning model's point projection with the player's underlying form to give
+sharp, actionable advice.
 
-Synthesize this information. Consider factors like:
-- Is the player nailed on (playing 90 mins)?
-- Is their form good?
-- Does the ML model predict a high return?
+You will receive:
+1. A player's profile (position, team, price, upcoming fixture venue).
+2. Recent form metrics (points, minutes, attacking/defensive output).
+3. A machine learning projection for their points in the upcoming Gameweek.
 
-Provide a verdict: BUY, SELL, or HOLD.
-Keep your response under 150 words. Be direct and analytical.
+Weigh these factors:
+- Minutes security: is the player nailed-on (high start rate, ~90 mins) or a
+  rotation/bench risk?
+- Form trajectory: are recent returns trending up or cooling off?
+- The ML projection, judged against what is good for the player's position
+  (a 4.0 projection is excellent for a defender but modest for a forward).
+- Value for money relative to price.
+
+Respond in this exact format:
+VERDICT: <BUY / SELL / HOLD>  (Confidence: <Low / Medium / High>)
+<2-4 sentences of concise, data-driven reasoning. Reference the specific
+numbers you were given. Mention captaincy only if the projection is elite.>
+
+Keep the whole response under 130 words. Be direct and analytical, not generic.
 """
 
-def generate_player_prompt(player_name, gw, predicted_points, recent_stats):
+
+def _fmt(value, spec="", fallback="n/a"):
+    """Format a value, tolerating None/NaN."""
+    try:
+        if value is None or value != value:  # NaN check
+            return fallback
+        return f"{value:{spec}}" if spec else f"{value}"
+    except (TypeError, ValueError):
+        return fallback
+
+
+def generate_player_prompt(player_name, gw, predicted_points, profile, recent_stats):
+    """Build the user prompt, injecting the ML projection, profile and form.
+
+    Args:
+        profile: dict of static/fixture context (position, team, price, venue).
+        recent_stats: dict of recent-form metrics.
     """
-    Generates the user prompt injecting the ML predictions and stats.
-    """
-    prompt = f"Analyze {player_name} for the upcoming Gameweek {gw}.\n\n"
-    prompt += f"--- ML Model Prediction ---\n"
-    prompt += f"Predicted Points next GW: {predicted_points:.2f}\n\n"
-    
-    prompt += f"--- Recent Form (Last 3 GWs) ---\n"
+    venue = profile.get('next_venue')
+    venue_str = {1.0: "Home", 0.0: "Away"}.get(venue, "Unknown")
+
+    prompt = f"Analyse {player_name} for the upcoming Gameweek {gw}.\n\n"
+
+    prompt += "--- Player Profile ---\n"
+    prompt += f"Position: {profile.get('position', 'UNK')}\n"
+    prompt += f"Team: {profile.get('team', 'UNK')}\n"
+    prompt += f"Price: £{_fmt(profile.get('price'), '.1f')}m\n"
+    prompt += f"Next fixture venue: {venue_str}\n\n"
+
+    prompt += "--- ML Model Projection ---\n"
+    prompt += f"Projected points (next GW): {_fmt(predicted_points, '.2f')}\n\n"
+
+    prompt += "--- Recent Form (last 3-5 GWs) ---\n"
     for k, v in recent_stats.items():
-        if isinstance(v, float):
-            prompt += f"{k}: {v:.2f}\n"
-        else:
-            prompt += f"{k}: {v}\n"
-            
-    prompt += "\nBased on this data, what is your verdict (BUY/SELL/HOLD) and brief reasoning?"
+        prompt += f"{k}: {_fmt(v, '.2f')}\n"
+
+    prompt += "\nGive your verdict (BUY/SELL/HOLD) with confidence and reasoning."
     return prompt

@@ -60,17 +60,101 @@ def get_assistant():
 
 assistant = get_assistant()
 
+
+def render_verdict(advice: str):
+    """Split the LLM reply into a colour-coded BUY/SELL/HOLD stamp + reasoning.
+
+    Returns (stamp_html, body_text). Falls back gracefully if the model didn't
+    follow the expected 'VERDICT: ...' format.
+    """
+    import re
+
+    verdict, confidence, body = None, None, advice
+    m = re.search(r'VERDICT:\s*(BUY|SELL|HOLD)', advice, re.IGNORECASE)
+    if m:
+        verdict = m.group(1).upper()
+        c = re.search(r'Confidence:\s*(Low|Medium|High)', advice, re.IGNORECASE)
+        confidence = c.group(1).title() if c else None
+        # Everything after the first line break becomes the reasoning body.
+        parts = advice.split('\n', 1)
+        body = parts[1].strip() if len(parts) > 1 else ""
+
+    if not verdict:
+        return "", advice  # no recognisable verdict; show the raw reply
+
+    icon = {"BUY": "🟢", "SELL": "🔴", "HOLD": "🟡"}[verdict]
+    conf_html = (f"<span class='verdict-confidence'>{confidence} confidence</span>"
+                 if confidence else "")
+    stamp = (f"<div class='verdict-stamp verdict-{verdict.lower()}'>"
+             f"{icon} {verdict}{conf_html}</div>")
+    return stamp, body
+
+
+# Primary kit colour per club (used for accents + the pitch marker). Covers
+# clubs across all seasons in the dataset; unknown clubs fall back to FPL green.
+TEAM_COLORS = {
+    "Arsenal": "#EF0107", "Aston Villa": "#95BFE5", "Bournemouth": "#DA291C",
+    "Brentford": "#E30613", "Brighton": "#0057B8", "Burnley": "#6C1D45",
+    "Cardiff": "#0070B5", "Chelsea": "#034694", "Crystal Palace": "#1B458F",
+    "Everton": "#1f6fd6", "Fulham": "#E5E5E5", "Huddersfield": "#0073CF",
+    "Hull": "#F18A00", "Leeds": "#FFE100", "Leicester": "#1f6fd6",
+    "Liverpool": "#C8102E", "Luton": "#F78F1E", "Man City": "#6CABDD",
+    "Man Utd": "#DA291C", "Middlesbrough": "#E21C38", "Newcastle": "#E8E8E8",
+    "Norwich": "#00A650", "Nott'm Forest": "#DD0000", "Sheffield Utd": "#EE2737",
+    "Southampton": "#D71920", "Spurs": "#7E97D6", "Stoke": "#E03A3E",
+    "Sunderland": "#EB172B", "Swansea": "#E5E5E5", "Watford": "#FBEE23",
+    "West Brom": "#3a6abf", "West Ham": "#A7263A", "Wolves": "#FDB913",
+}
+
+
+def team_color(team_name: str) -> str:
+    return TEAM_COLORS.get(str(team_name), "#00ff87")
+
+
+def pitch_map_svg(position: str, kit: str) -> str:
+    """Vertical pitch SVG with a glowing marker placed at the player's zone."""
+    # Attacking upwards: FWD near the top, GK in front of own goal at the base.
+    y = {"GK": 244, "GKP": 244, "DEF": 188, "MID": 120, "FWD": 52}.get(str(position), 150)
+    line = "rgba(255,255,255,0.30)"
+    return f"""
+<svg class='pitch-wrap' width='118' height='168' viewBox='0 0 200 280' xmlns='http://www.w3.org/2000/svg'>
+  <defs>
+    <linearGradient id='grass' x1='0' y1='0' x2='0' y2='1'>
+      <stop offset='0' stop-color='#0e5a34'/><stop offset='1' stop-color='#0a3f26'/>
+    </linearGradient>
+  </defs>
+  <rect x='3' y='3' width='194' height='274' rx='10' fill='url(#grass)' stroke='{line}' stroke-width='2'/>
+  <rect x='0' y='40' width='200' height='40' fill='rgba(255,255,255,0.03)'/>
+  <rect x='0' y='120' width='200' height='40' fill='rgba(255,255,255,0.03)'/>
+  <rect x='0' y='200' width='200' height='40' fill='rgba(255,255,255,0.03)'/>
+  <line x1='3' y1='140' x2='197' y2='140' stroke='{line}' stroke-width='2'/>
+  <circle cx='100' cy='140' r='30' fill='none' stroke='{line}' stroke-width='2'/>
+  <circle cx='100' cy='140' r='3' fill='{line}'/>
+  <rect x='55' y='3' width='90' height='44' fill='none' stroke='{line}' stroke-width='2'/>
+  <rect x='80' y='3' width='40' height='18' fill='none' stroke='{line}' stroke-width='2'/>
+  <rect x='55' y='233' width='90' height='44' fill='none' stroke='{line}' stroke-width='2'/>
+  <rect x='80' y='259' width='40' height='18' fill='none' stroke='{line}' stroke-width='2'/>
+  <g class='pitch-marker'>
+    <circle cx='100' cy='{y}' r='15' fill='{kit}' fill-opacity='0.25'/>
+    <circle cx='100' cy='{y}' r='8' fill='{kit}' stroke='#ffffff' stroke-width='2'/>
+  </g>
+</svg>
+"""
+
+
 # UI Layout Header
-st.markdown("<h1>⚡ FPL <span class='highlight'>AI Predictor</span></h1>", unsafe_allow_html=True)
-st.markdown("<p style='color:#94a3b8; font-size:1.1rem; margin-bottom: 2rem;'>Leverage Machine Learning and LLMs to dominate your mini-leagues.</p>", unsafe_allow_html=True)
+st.markdown("<div class='kicker'>⚽ Matchday Intelligence</div>", unsafe_allow_html=True)
+st.markdown("<h1>FPL <span class='highlight'>Scout AI</span></h1>", unsafe_allow_html=True)
+st.markdown("<div class='lower-third'></div>", unsafe_allow_html=True)
+st.markdown("<p style='color:#b9a9c9; font-size:1.1rem; margin-bottom: 2rem;'>Machine learning projections + an AI gaffer's verdict. Pick your XI like a pro.</p>", unsafe_allow_html=True)
 
 if df.empty:
     st.error("Prediction data not found. Please run the ML pipeline first.")
     st.stop()
 
 # Sidebar controls
-st.sidebar.markdown("<h2 style='margin-bottom:0;'>Scout Filter</h2>", unsafe_allow_html=True)
-st.sidebar.markdown("<p style='color:#94a3b8; font-size:0.9rem; margin-bottom:1rem;'>Select a target for analysis</p>", unsafe_allow_html=True)
+st.sidebar.markdown("<h2 style='margin-bottom:0;'>📋 Team Sheet</h2>", unsafe_allow_html=True)
+st.sidebar.markdown("<p style='color:#b9a9c9; font-size:0.9rem; margin-bottom:1rem;'>Pick a player to scout</p>", unsafe_allow_html=True)
 
 players = sorted(df['name'].unique())
 selected_player = st.sidebar.selectbox("Search Player", players, index=players.index("Erling Haaland") if "Erling Haaland" in players else 0)
@@ -80,8 +164,8 @@ player_gws = sorted(df[df['name'] == selected_player]['GW'].unique())
 selected_gw = st.sidebar.selectbox("Gameweek", player_gws)
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("**POWERED BY:**")
-st.sidebar.markdown("<div style='font-family:monospace;font-size:0.8rem;color:#00ff85'>> ML: LightGBM Regressor<br>> AI: OpenRouter API</div>", unsafe_allow_html=True)
+st.sidebar.markdown("**STARTING XI:**")
+st.sidebar.markdown("<div style='font-family:monospace;font-size:0.8rem;color:#00ff87'>⚙️ ML: LightGBM Regressor<br>🎙️ AI: OpenRouter LLM</div>", unsafe_allow_html=True)
 
 # Main Content Area
 player_data = df[(df['name'] == selected_player) & (df['GW'] == selected_gw)]
@@ -104,10 +188,29 @@ else:
     # Gamification Logic safely calculated
     form_icon = "🔥" if avg_points >= 6 else "🧊" if avg_points <= 2 else "⚡"
     mins_percent = min(100, int((avg_mins / 90) * 100))
-    risk_badge = "<span class='player-badge badge-team' style='background:rgba(239, 68, 68, 0.2);color:#ef4444;border:1px solid rgba(239, 68, 68, 0.5);'>⚠️ Rotation Risk</span>" if avg_mins < 60 else ""
-    
+    risk_badge = "<span class='player-badge badge-risk'>⚠️ Rotation Risk</span>" if avg_mins < 60 else ""
+
+    # Position-coloured badge (classic FPL colours: GK/DEF/MID/FWD)
+    position = str(row.get('position', 'UNK'))
+    pos_class = {"GK": "badge-gk", "GKP": "badge-gk", "DEF": "badge-def",
+                 "MID": "badge-mid", "FWD": "badge-fwd"}.get(position, "badge-team")
+
+    # Team kit colour: drives the card accent stripe and the pitch marker.
+    team = str(row.get('team_x', 'UNK'))
+    kit = team_color(team)
+    pitch_svg = pitch_map_svg(position, kit)
+
     # Scout Card Container - Single line to prevent Markdown code block bugs
-    scout_html = f"<div class='scout-card'><div style='margin-bottom:24px;'><span class='player-badge badge-team'>{row.get('team_x', 'UNK')}</span> <span class='player-badge badge-pos'>{row.get('position', 'UNK')}</span> {risk_badge} <h2 style='margin-top:10px; margin-bottom:2px; font-size:2.2rem;'>{selected_player}</h2><div style='color:#00ff85; font-size:0.95rem; font-family:\"Outfit\", sans-serif; letter-spacing:1px; text-transform:uppercase;'>Gameweek {selected_gw} Profile</div></div></div>"
+    info_html = (
+        f"<div><span class='player-badge badge-team'><span class='kit-dot' style='background:{kit};'></span>{team}</span> "
+        f"<span class='player-badge {pos_class}'>{position}</span> {risk_badge}"
+        f"<h2 style='margin-top:10px; margin-bottom:2px; font-size:2.4rem;'>{selected_player}</h2>"
+        f"<div class='gw-tag'>⚽ Gameweek {selected_gw} Profile</div></div>"
+    )
+    scout_html = (
+        f"<div class='scout-card' style='border-left:5px solid {kit};'>"
+        f"<div class='scout-flex'>{info_html}{pitch_svg}</div></div>"
+    )
     st.markdown(scout_html, unsafe_allow_html=True)
     
     # Metrics Grid inside Scout Card
@@ -133,8 +236,8 @@ else:
         st.markdown("<p style='color:#94a3b8; font-size:0.9rem;'>Player's points trajectory up to the selected Gameweek.</p>", unsafe_allow_html=True)
         
         historical_data = df[(df['name'] == selected_player) & (df['GW'] <= selected_gw)].sort_values('GW')
-        if not historical_data.empty:
-            chart_data = historical_data.set_index('GW')[['target_next_gw_points']].rename(columns={'target_next_gw_points': 'Points'})
+        if not historical_data.empty and 'total_points' in historical_data.columns:
+            chart_data = historical_data.set_index('GW')[['total_points']].rename(columns={'total_points': 'Points'})
             st.bar_chart(chart_data, color="#00ff85", height=250)
             
     with chart_col2:
@@ -184,16 +287,27 @@ else:
     st.markdown("---")
     
     # AI Verdict Trigger
-    st.markdown("<div class='ai-header'><span class='ai-header-icon'>🤖</span> Ask the FPL AI Expert</div>", unsafe_allow_html=True)
-    
-    if st.button("Generate Tactical Verdict"):
-        with st.spinner("SCANNING NEURAL NETWORK & ANALYZING METRICS..."):
-            advice = assistant.generate_advice(selected_player, selected_gw)
-            
-            # Convert markdown to HTML so it renders correctly inside the custom div
-            import markdown
-            advice_html = markdown.markdown(advice)
-            
-            # Inject the fully formatted HTML into the custom styling box - Single line
-            verdict_html = f"<div class='ai-verdict-container'><div class='ai-verdict-box'>{advice_html}</div></div>"
-            st.markdown(verdict_html, unsafe_allow_html=True)
+    st.markdown("<div class='ai-header'><span class='ai-header-icon'>🎙️</span> The Gaffer's Verdict</div>", unsafe_allow_html=True)
+
+    if st.button("⚽ Generate Tactical Verdict"):
+        # Custom animated radar loader while the LLM is thinking.
+        loader = st.empty()
+        loader.markdown(
+            "<div class='scanner'><div class='radar'></div><div>"
+            "<div class='scanner-text'>Scanning the pitch</div>"
+            "<div class='scanner-sub'>Crunching xG, form & fixtures…</div>"
+            "</div></div>",
+            unsafe_allow_html=True,
+        )
+
+        advice = assistant.generate_advice(selected_player, selected_gw)
+        loader.empty()  # clear the radar once we have a verdict
+
+        stamp_html, body = render_verdict(advice)
+
+        # Convert the reasoning markdown to HTML for the custom div
+        import markdown
+        body_html = markdown.markdown(body)
+
+        verdict_html = f"<div class='ai-verdict-container'>{stamp_html}<div class='ai-verdict-box'>{body_html}</div></div>"
+        st.markdown(verdict_html, unsafe_allow_html=True)
