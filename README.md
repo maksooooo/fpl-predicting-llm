@@ -91,9 +91,11 @@ Or run the three stages individually to rebuild everything from the raw data:
    python src/features/build_features.py
    ```
    *Builds leakage-safe features from `cleaned_merged_seasons.csv`: lag and
-   rolling-form metrics (3/5 GW), scoring consistency (std), points-per-90,
-   minutes/start reliability, one-hot position flags, and the next fixture's
-   home/away venue. Writes `data/processed/engineered_features.csv`.*
+   rolling-form metrics (3/5 GW), EWMA form, season-to-date points-per-game,
+   scoring consistency (std), points-per-90, minutes/start reliability, rest
+   days, one-hot position flags, the next fixture's home/away venue, and
+   **team & next-opponent attacking/defensive strength** (fixture difficulty).
+   Writes `data/processed/engineered_features.csv`.*
 
 2. **Train the Model:**
    ```bash
@@ -110,6 +112,19 @@ Or run the three stages individually to rebuild everything from the raw data:
    *Evaluates on the 2023-24 hold-out season and saves `predicted_points` back
    to `data/processed/test_data_with_targets.csv` for the app.*
 
+> **Model selection** lives in `src/models/experiments.py`, which compares loss
+> objectives and hyper-parameters **on the 2022-23 validation season only** (the
+> test season is never used for tuning). Findings: the `MAE` (L1) objective
+> clearly beats Tweedie/Poisson/Huber for this metric, and the added
+> season-to-date and fixture-difficulty features are genuinely informative —
+> `season_ppg` is the model's single most important feature.
+>
+> A two-stage **hurdle model** — `P(plays) × E[points | plays]`, see
+> `src/models/hurdle_experiment.py` — was also tested and **rejected**: despite a
+> near-perfect appearance classifier (ROC-AUC 0.99), the product form is worse on
+> validation MAE (0.917 vs 0.879) than the single regressor, which already
+> handles the zero-inflation while optimising the target metric directly.
+
 ### How good is it?
 
 The model is benchmarked against two naive baselines, and metrics are reported
@@ -118,12 +133,12 @@ flattered by the ~56% of rows where a non-playing player trivially scores ~0.
 
 | Predictor | Test MAE | Test RMSE |
 |-----------|---------:|----------:|
-| **LightGBM (ours)** | **0.80** | **2.03** |
+| **LightGBM (ours)** | **0.79** | **2.03** |
 | Baseline: form average (last 3 GW) | 1.05 | 2.20 |
 | Baseline: repeat last GW score | 1.14 | 2.59 |
 
 The model improves on the form-average baseline by ~24% and on last-GW by ~30%.
-Among players who featured, MAE is ≈1.77 points, and `evaluate.py` also prints a
+Among players who featured, MAE is ≈1.76 points, and `evaluate.py` also prints a
 per-position breakdown (GK / DEF / MID / FWD).
 
 ## 🏃‍♂️ Running the Web App

@@ -1,5 +1,6 @@
 .env
 venv
+PRESENTATION.md
 
 # Python
 __pycache__/

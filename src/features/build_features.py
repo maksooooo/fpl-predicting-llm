@@ -38,13 +38,66 @@ def _shifted_group(df, col):
     return df.groupby(['name', 'season_x'])[col].shift(1)
 
 
+def build_team_context(df):
+    """Add fixture-difficulty features from team-level rolling form.
+
+    For every player row we attach (a) their own team's recent attacking and
+    defensive form and (b) the *next* opponent's attacking/defensive form
+    entering the gameweek we are predicting. All rolling values are shifted so
+    they only ever use matches played *before* the fixture in question -- the
+    schedule (who/where) is known in advance, the form is computed from the
+    past, so there is no leakage.
+    """
+    print("Building team/opponent strength features...")
+
+    # Goals for/against from the player's team perspective.
+    df['team_goals_for'] = np.where(df['was_home'], df['team_h_score'], df['team_a_score'])
+    df['team_goals_against'] = np.where(df['was_home'], df['team_a_score'], df['team_h_score'])
+
+    # Collapse the squad to one row per team-match, then roll each team's form.
+    tm = (df.dropna(subset=['team_h_score'])
+            .drop_duplicates(['season_x', 'team_x', 'GW'])
+            [['season_x', 'team_x', 'GW', 'kickoff_time',
+              'team_goals_for', 'team_goals_against']]
+            .sort_values(['team_x', 'season_x', 'kickoff_time']))
+
+    for src, dst in [('team_goals_for', 'team_att_form'),
+                     ('team_goals_against', 'team_def_form')]:
+        shifted = tm.groupby(['team_x', 'season_x'])[src].shift(1)
+        tm[dst] = (shifted.groupby([tm['team_x'], tm['season_x']])
+                   .rolling(window=5, min_periods=1).mean()
+                   .reset_index(level=[0, 1], drop=True))
+
+    form_cols = ['season_x', 'team_x', 'GW', 'team_att_form', 'team_def_form']
+
+    # (a) Own-team form at the current gameweek.
+    df = df.merge(tm[form_cols], on=['season_x', 'team_x', 'GW'], how='left')
+
+    # (b) Next opponent's form entering the predicted fixture.
+    grp = df.groupby(['name', 'season_x'])
+    df['next_opp_name'] = grp['opp_team_name'].shift(-1)
+    df['next_gw'] = grp['GW'].shift(-1)
+    opp = tm[form_cols].rename(columns={
+        'team_x': 'next_opp_name', 'GW': 'next_gw',
+        'team_att_form': 'next_opp_att_form', 'team_def_form': 'next_opp_def_form'})
+    df = df.merge(opp, on=['season_x', 'next_opp_name', 'next_gw'], how='left')
+
+    df = df.drop(columns=['team_goals_for', 'team_goals_against',
+                          'next_opp_name', 'next_gw'])
+    return df
+
+
 def engineer_features(df):
     """Create the target plus leakage-safe lag, rolling and context features."""
     print("Engineering features...")
     grp = df.groupby(['name', 'season_x'])
 
-    # 1. Target: the player's points in the *next* gameweek.
+    # 1. Target: the player's points in the *next* gameweek. We also keep their
+    #    next-GW minutes as a secondary target for the hurdle model's
+    #    "will they even play?" stage. (Excluded from model inputs in
+    #    train_model.DROP_COLS so it can never leak.)
     df['target_next_gw_points'] = grp['total_points'].shift(-1)
+    df['target_next_gw_minutes'] = grp['minutes'].shift(-1)
 
     # 2. Simple lag features (last match's output).
     df['lag_1_total_points'] = grp['total_points'].shift(1)
@@ -85,6 +138,29 @@ def engineer_features(df):
         df['rolling_5_avg_minutes'].clip(lower=1.0) * 90
     ).clip(upper=30)
 
+    # 6b. Exponentially-weighted form -- weights recent matches more heavily
+    #     than a flat rolling mean, capturing momentum.
+    df['ewma_total_points'] = (
+        shifted_pts.groupby([df['name'], df['season_x']])
+        .apply(lambda s: s.ewm(span=3, min_periods=1).mean())
+        .reset_index(level=[0, 1], drop=True)
+        .fillna(0.0)
+    )
+
+    # 6c. Season-to-date points-per-game (expanding mean of past matches).
+    df['season_ppg'] = (
+        shifted_pts.groupby([df['name'], df['season_x']])
+        .expanding().mean()
+        .reset_index(level=[0, 1], drop=True)
+        .fillna(0.0)
+    )
+
+    # 6d. Rest: days since the player's previous match (fatigue / freshness).
+    prev_kickoff = grp['kickoff_time'].shift(1)
+    df['days_since_last'] = (
+        (df['kickoff_time'] - prev_kickoff).dt.days.clip(lower=0, upper=30)
+    )
+
     # 7. Fixture context for the match we are predicting. Home/away and the
     #    opponent are part of the published schedule, so the *next* fixture's
     #    venue is known ahead of time -- legitimate, not leakage.
@@ -95,6 +171,9 @@ def engineer_features(df):
     #    was previously dropped entirely).
     for pos in ['GK', 'DEF', 'MID', 'FWD']:
         df[f'is_{pos.lower()}'] = (df['position'] == pos).astype(int)
+
+    # 8b. Team & next-opponent strength (fixture difficulty).
+    df = build_team_context(df)
 
     # 9. Drop rows with no known target (last match of each player-season).
     print(f"Shape before dropping NaN targets: {df.shape}")
