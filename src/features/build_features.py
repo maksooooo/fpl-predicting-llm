@@ -8,7 +8,7 @@ import os
 ROLLING_COLS = [
     'total_points', 'minutes', 'bps', 'ict_index', 'threat', 'creativity',
     'influence', 'goals_scored', 'assists', 'clean_sheets', 'goals_conceded',
-    'saves',
+    'saves', 'bonus',
 ]
 ROLLING_WINDOWS = (3, 5)
 
@@ -84,6 +84,55 @@ def build_team_context(df):
 
     df = df.drop(columns=['team_goals_for', 'team_goals_against',
                           'next_opp_name', 'next_gw'])
+    return df
+
+
+def _venue_running_mean(df, venue):
+    """Running mean of a player's past points at a given venue (home/away).
+
+    Uses only matches *before* the current one (cumulative sum/count then a
+    one-match shift within each player-season), so it is leakage-safe.
+    """
+    pts = df['total_points'].where(df['was_home'] == venue)
+    key = [df['name'], df['season_x']]
+    csum = pts.fillna(0.0).groupby(key).cumsum()
+    ccnt = pts.notna().astype(float).groupby(key).cumsum()
+    running = csum / ccnt.replace(0, np.nan)            # includes current match
+    return running.groupby(key).shift(1)               # exclude current match
+
+
+def build_extra_features(df):
+    """Venue-split form, fixture congestion, price momentum, value efficiency."""
+    print("Building venue / congestion / momentum features...")
+    key = [df['name'], df['season_x']]
+
+    # Form trajectory: short-term minus medium-term form (heating up / cooling).
+    df['form_trend_points'] = (
+        df['rolling_3_avg_total_points'] - df['rolling_5_avg_total_points'])
+
+    # Home/away form splits, then the form relevant to the *next* fixture's venue.
+    df['home_form_points'] = _venue_running_mean(df, True).fillna(0.0)
+    df['away_form_points'] = _venue_running_mean(df, False).fillna(0.0)
+    df['form_at_next_venue'] = np.where(
+        df['next_was_home'] == 1, df['home_form_points'], df['away_form_points'])
+
+    # Fixture congestion: how many matches this player had in the prior 14 days.
+    def _congestion(g):
+        s = g.set_index('kickoff_time')['minutes'].notna().astype(float)
+        return (s.rolling('14D').count() - 1).clip(lower=0).values
+    df = df.sort_values(['name', 'season_x', 'kickoff_time'])
+    df['games_last_14d'] = (
+        df.groupby('name', group_keys=False)[['kickoff_time', 'minutes']]
+        .apply(lambda g: pd.Series(_congestion(g), index=g.index)))
+
+    # Price momentum: change in the player's price over the last 5 matches.
+    df['price_change_5'] = df['value'] - df.groupby(key)['value'].shift(5)
+    df['price_change_5'] = df['price_change_5'].fillna(0.0)
+
+    # Value efficiency: season points-per-game per £million of price.
+    df['points_per_million'] = (
+        df['season_ppg'] / (df['value'] / 10).clip(lower=3.5)).clip(upper=3)
+
     return df
 
 
@@ -174,6 +223,9 @@ def engineer_features(df):
 
     # 8b. Team & next-opponent strength (fixture difficulty).
     df = build_team_context(df)
+
+    # 8c. Venue-split form, congestion, price momentum, value efficiency.
+    df = build_extra_features(df)
 
     # 9. Drop rows with no known target (last match of each player-season).
     print(f"Shape before dropping NaN targets: {df.shape}")

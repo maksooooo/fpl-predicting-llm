@@ -141,6 +141,52 @@ The model improves on the form-average baseline by ~24% and on last-GW by ~30%.
 Among players who featured, MAE is ≈1.76 points, and `evaluate.py` also prints a
 per-position breakdown (GK / DEF / MID / FWD).
 
+### Analysis scripts
+
+| Script | What it produces |
+|---|---|
+| `src/eda/data_story.py` | Problem-analysis EDA figure (`reports/eda_overview.png`): zero-inflation, points by position, form-vs-outcome |
+| `src/models/experiments.py` | Loss-objective comparison + hyper-parameter search (validation) |
+| `src/models/model_comparison.py` | Benchmarks Linear / Ridge / Random Forest / XGBoost / LightGBM |
+| `src/models/analysis.py` | Feature-group **ablation** + **error / calibration analysis** (saves plots to `reports/`) |
+| `src/models/hurdle_experiment.py` | Two-stage hurdle model A/B (rejected) |
+
+Selected findings (all on the validation season):
+
+- **Model choice is evidence-based.** Gradient boosting beats linear models and
+  Random Forest decisively; LightGBM edges XGBoost and trains in ~1.5s:
+
+  | Model | val MAE | featured MAE |
+  |---|--:|--:|
+  | Linear Regression | 1.064 | 1.931 |
+  | Random Forest | 1.029 | 1.947 |
+  | XGBoost | 0.886 | 1.758 |
+  | **LightGBM (ours)** | **0.882** | **1.752** |
+
+- **Ablation** confirms the engineered features earn their place — after the raw
+  current-match stats, the most valuable groups are `position`,
+  `fixture_difficulty`, `venue` and `availability`.
+- **Error analysis** shows the model is accurate on typical returns but
+  **conservative on big hauls** (MAE ≈0.6 for 2–3 point games vs ≈9.6 for 9+
+  point hauls) — expected regression-to-the-mean on rare, high-variance events.
+
+### Tests
+
+A `pytest` suite guards correctness and catches silent regressions:
+
+```bash
+pytest                 # 14 tests, ~2s
+```
+
+- **Leakage tests** — including a gold-standard check that mutating a *future*
+  match never changes a past row's features.
+- **Feature-correctness** — target shift, rolling windows use only the past,
+  position normalisation, one-hot consistency, next-fixture venue.
+- **Pipeline contract** — targets are never used as features; the feature matrix
+  is numeric; the season split is chronological and disjoint.
+- **Performance regression guard** — the trained model must stay under its MAE
+  bar and keep beating the naive baselines.
+
 ## 🏃‍♂️ Running the Web App
 
 Start the Streamlit interface to interact with the predictions and AI verdicts:

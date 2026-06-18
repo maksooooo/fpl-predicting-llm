@@ -11,6 +11,24 @@ TEST_SEASONS = ['2023-24']
 
 TARGET = 'target_next_gw_points'
 
+# Config selected on the 2022-23 validation season (see experiments.py):
+# L1/MAE clearly beat Tweedie/Poisson/Huber for this metric, and a slower
+# learning rate with more leaves edged out the previous settings.
+REG_PARAMS = dict(
+    objective='mae',
+    learning_rate=0.03,
+    num_leaves=63,
+    max_depth=6,
+    n_estimators=3000,          # upper bound; early stopping picks the best
+    subsample=0.8,
+    subsample_freq=1,
+    colsample_bytree=0.8,
+    min_child_samples=60,
+    random_state=42,
+    n_jobs=-1,
+    verbose=-1,
+)
+
 # Identifiers / text columns that must never be fed to the model as features.
 DROP_COLS = [
     TARGET, 'target_next_gw_minutes',  # targets — never features (leakage)
@@ -56,23 +74,7 @@ def train_model(X_train, y_train, X_val, y_val):
     """Train a LightGBM regressor with early stopping on the validation set."""
     print("Training LGBMRegressor model...")
 
-    # Config selected on the 2022-23 validation season (see experiments.py):
-    # L1/MAE clearly beat Tweedie/Poisson/Huber for this metric, and a slower
-    # learning rate with more leaves edged out the previous settings.
-    model = LGBMRegressor(
-        objective='mae',
-        learning_rate=0.03,
-        num_leaves=63,
-        max_depth=6,
-        n_estimators=3000,          # upper bound; early stopping picks the best
-        subsample=0.8,
-        subsample_freq=1,
-        colsample_bytree=0.8,
-        min_child_samples=60,
-        random_state=42,
-        n_jobs=-1,
-        verbose=-1,
-    )
+    model = LGBMRegressor(**REG_PARAMS)
 
     model.fit(
         X_train, y_train,
