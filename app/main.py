@@ -142,6 +142,40 @@ def pitch_map_svg(position: str, kit: str) -> str:
 """
 
 
+# --- Optimal squad (Dream Team) ------------------------------------------------
+SQUAD_DATA_PATH = os.path.join(
+    os.path.dirname(__file__), '../data/processed/test_data_with_targets.csv')
+
+
+@st.cache_data(show_spinner=False)
+def compute_optimal_squad(gw):
+    """Solve the budget-constrained best-XV MILP for a gameweek (cached)."""
+    from src.models.squad_optimizer import build_optimal_squad
+    squad, summary = build_optimal_squad(SQUAD_DATA_PATH, gw)
+    return squad, summary
+
+
+def _chip(row):
+    cap = "<span class='chip-cap'>C</span>" if row['captain'] else ""
+    return (
+        f"<div class='player-chip{' is-captain' if row['captain'] else ''}'>"
+        f"<div class='chip-name'>{row['name'].split()[-1]}{cap}</div>"
+        f"<div class='chip-meta'>{row['team_x']} · £{row['value']/10:.1f}m</div>"
+        f"<div class='chip-pts'>{row['predicted_points']:.1f}</div></div>"
+    )
+
+
+def render_squad_pitch(squad):
+    """Render the starting XI on a pitch, grouped GK/DEF/MID/FWD."""
+    xi = squad[squad['starter']]
+    rows = ""
+    for pos in ['GK', 'DEF', 'MID', 'FWD']:
+        line = xi[xi['position'] == pos].sort_values('predicted_points', ascending=False)
+        chips = "".join(_chip(r) for _, r in line.iterrows())
+        rows += f"<div class='pitch-row'>{chips}</div>"
+    return f"<div class='squad-pitch'>{rows}</div>"
+
+
 # UI Layout Header
 st.markdown("<div class='kicker'>⚽ Matchday Intelligence</div>", unsafe_allow_html=True)
 st.markdown("<h1>FPL <span class='highlight'>Scout AI</span></h1>", unsafe_allow_html=True)
@@ -311,3 +345,39 @@ else:
 
         verdict_html = f"<div class='ai-verdict-container'>{stamp_html}<div class='ai-verdict-box'>{body_html}</div></div>"
         st.markdown(verdict_html, unsafe_allow_html=True)
+
+
+# ----------------------------------------------------------------------------
+# Dream Team — budget-constrained optimal squad for a gameweek
+# ----------------------------------------------------------------------------
+st.markdown("---")
+st.markdown("<div class='ai-header'><span class='ai-header-icon'>🏆</span> Dream Team Optimiser</div>", unsafe_allow_html=True)
+st.markdown("<p style='color:#b9a9c9; font-size:0.95rem;'>The best 15-player squad for a gameweek under the real FPL rules — £100m budget, valid formation, max 3 per club — chosen by solving a mixed-integer optimisation over the model's projections.</p>", unsafe_allow_html=True)
+
+squad_gw = st.selectbox("Gameweek", sorted(df['GW'].unique()), key="squad_gw")
+
+if st.button("🏆 Build Optimal Squad"):
+    with st.spinner("Optimising 15 picks under budget & formation constraints…"):
+        try:
+            squad, summary = compute_optimal_squad(int(squad_gw))
+
+            st.markdown(
+                f"<div class='squad-summary'>"
+                f"<div class='squad-stat'><span class='v'>{summary['projected_points']}</span>"
+                f"<span class='l'>Projected pts</span></div>"
+                f"<div class='squad-stat'><span class='v'>£{summary['cost']:.1f}m</span>"
+                f"<span class='l'>Squad cost</span></div>"
+                f"<div class='squad-stat'><span class='v'>{summary['formation']}</span>"
+                f"<span class='l'>Formation</span></div></div>",
+                unsafe_allow_html=True,
+            )
+            st.markdown(render_squad_pitch(squad), unsafe_allow_html=True)
+
+            bench = squad[~squad['starter']]
+            bench_str = " · ".join(
+                f"{r['name'].split()[-1]} ({r['position']}, £{r['value']/10:.1f}m)"
+                for _, r in bench.iterrows())
+            st.markdown(f"<p style='color:#b9a9c9; font-size:0.85rem;'><b>Bench:</b> {bench_str}</p>",
+                        unsafe_allow_html=True)
+        except Exception as e:
+            st.error(f"Could not build squad: {e}")

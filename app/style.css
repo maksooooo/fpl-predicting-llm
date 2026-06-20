@@ -400,6 +400,75 @@ hr {
 @keyframes dots { 0% { content: ""; } 25% { content: "."; } 50% { content: ".."; } 75% { content: "..."; } }
 @keyframes sweep { to { transform: rotate(360deg); } }
 
+/* ====== Dream Team pitch view ====== */
+.squad-pitch {
+    position: relative;
+    border-radius: 16px;
+    padding: 22px 12px;
+    background:
+        linear-gradient(180deg, #0e5a34 0%, #0a3f26 100%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: inset 0 0 60px rgba(0, 0, 0, 0.35), 0 14px 36px rgba(0,0,0,0.45);
+    overflow: hidden;
+    margin-bottom: 16px;
+}
+.squad-pitch::before {
+    content: "";
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(180deg,
+        rgba(255,255,255,0.04) 0 38px, rgba(255,255,255,0) 38px 76px);
+    pointer-events: none;
+}
+.squad-pitch::after {
+    content: "";
+    position: absolute; left: 50%; top: 50%;
+    width: 120px; height: 120px; margin: -60px 0 0 -60px;
+    border: 2px solid rgba(255,255,255,0.12); border-radius: 50%;
+    pointer-events: none;
+}
+.pitch-row {
+    position: relative; z-index: 1;
+    display: flex; justify-content: center; flex-wrap: wrap;
+    gap: 10px; margin: 10px 0;
+}
+.player-chip {
+    width: 104px;
+    background: rgba(10, 5, 18, 0.82);
+    border: 1px solid rgba(255,255,255,0.14);
+    border-top: 3px solid var(--pl-green);
+    border-radius: 10px;
+    padding: 7px 6px 6px;
+    text-align: center;
+    backdrop-filter: blur(2px);
+}
+.player-chip.is-captain { border-top-color: #ffd23f; box-shadow: 0 0 16px rgba(255,210,63,0.35); }
+.chip-name {
+    font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 0.78rem;
+    color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.chip-meta { font-size: 0.7rem; color: var(--muted); margin-top: 2px; }
+.chip-pts {
+    font-family: 'Anton', sans-serif; font-size: 1.05rem; color: var(--pl-green);
+    margin-top: 1px;
+}
+.chip-cap {
+    display: inline-block; background: #ffd23f; color: #2b0030;
+    font-weight: 800; font-size: 0.6rem; border-radius: 4px; padding: 0 4px;
+    margin-left: 4px; vertical-align: 1px;
+}
+.squad-summary {
+    display: flex; gap: 22px; flex-wrap: wrap; margin: 6px 0 14px;
+}
+.squad-stat { font-family: 'Outfit', sans-serif; }
+.squad-stat .v {
+    font-family: 'Anton', sans-serif; font-size: 1.6rem; color: var(--pl-green);
+    display: block;
+}
+.squad-stat .l {
+    font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1.5px;
+    color: var(--muted);
+}
+
 /* ====== Animations ====== */
 @keyframes fadeUp { 0% { opacity: 0; transform: translateY(20px); } 100% { opacity: 1; transform: translateY(0); } }
 @keyframes scaleIn { 0% { opacity: 0; transform: scale(0.95); } 100% { opacity: 1; transform: scale(1); } }

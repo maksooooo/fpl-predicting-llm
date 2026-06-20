@@ -8,6 +8,7 @@ This project combines historical FPL data, a robust Gradient Boosting Machine Le
 
 - **Machine Learning Forecasts:** Predicts expected points for the next Gameweek based on historical performance, recent form, and advanced underlying metrics.
 - **AI Expert Verdict:** Uses state-of-the-art Large Language Models (via OpenRouter) to provide personalized, human-readable advice for any player, contextualized with ML predictions.
+- **Dream Team Optimiser:** Turns projections into a decision — builds the optimal 15-player squad for a gameweek under the real FPL rules (£100m budget, valid formation, max 3 per club) by solving a mixed-integer program.
 - **Interactive UI:** A clean, easy-to-use Streamlit web application that lets you search for players, select Gameweeks, and view metrics at a glance.
 - **Comprehensive Data Pipeline:** Processes multiple seasons of historical FPL data, engineered with rolling averages (e.g., last 3 matches form) and chronological train/validation/test splits.
 
@@ -150,6 +151,7 @@ per-position breakdown (GK / DEF / MID / FWD).
 | `src/models/model_comparison.py` | Benchmarks Linear / Ridge / Random Forest / XGBoost / LightGBM |
 | `src/models/analysis.py` | Feature-group **ablation** + **error / calibration analysis** (saves plots to `reports/`) |
 | `src/models/hurdle_experiment.py` | Two-stage hurdle model A/B (rejected) |
+| `src/models/squad_optimizer.py` | **Optimal squad builder** — budget/formation-constrained best XV via MILP |
 
 Selected findings (all on the validation season):
 
@@ -175,7 +177,7 @@ Selected findings (all on the validation season):
 A `pytest` suite guards correctness and catches silent regressions:
 
 ```bash
-pytest                 # 14 tests, ~2s
+pytest                 # 20 tests, ~2s
 ```
 
 - **Leakage tests** — including a gold-standard check that mutating a *future*
