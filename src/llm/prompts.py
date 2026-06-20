@@ -62,3 +62,29 @@ def generate_player_prompt(player_name, gw, predicted_points, profile, recent_st
 
     prompt += "\nGive your verdict (BUY/SELL/HOLD) with confidence and reasoning."
     return prompt
+
+
+TRANSFER_SYSTEM_PROMPT = """
+You are an elite Fantasy Premier League (FPL) analyst. You will be given stats 
+for two players. Based on their recent form, upcoming projected points, and price, 
+tell the user whether they should transfer Player 1 OUT to bring Player 2 IN.
+
+Respond with a VERDICT: <TRANSFER / KEEP> (Confidence: <Low / Medium / High>)
+Followed by 2-3 sentences of sharp, data-driven reasoning comparing both players.
+"""
+
+def transfer_user_prompt(p1, p2):
+    """Build the user prompt for comparing two players."""
+    def format_player(p):
+        return (f"{p['name']} ({p['team']} - {p['position']})\n"
+                f"Price: £{p['price']:.1f}m | Selected By: {p['selected_by']}%\n"
+                f"Proj Points: {p['predicted_points']:.2f}\n"
+                f"Form (L3): {p['form']:.2f}\n"
+                f"xG: {p['xg']:.2f} | xA: {p['xa']:.2f}")
+
+    prompt = "--- Player 1 (Current) ---\n"
+    prompt += format_player(p1) + "\n\n"
+    prompt += "--- Player 2 (Target) ---\n"
+    prompt += format_player(p2) + "\n\n"
+    prompt += "Give your verdict (TRANSFER/KEEP) and reasoning."
+    return prompt

@@ -348,6 +348,47 @@ else:
 
 
 # ----------------------------------------------------------------------------
+# Transfer Comparison
+# ----------------------------------------------------------------------------
+st.markdown("---")
+st.markdown("<div class='ai-header'><span class='ai-header-icon'>🔄</span> Transfer Comparison</div>", unsafe_allow_html=True)
+st.markdown("<p style='color:#b9a9c9; font-size:0.95rem;'>Compare two players and ask the AI whether you should make the transfer.</p>", unsafe_allow_html=True)
+
+t_col1, t_col2 = st.columns(2)
+
+with t_col1:
+    p1_name = st.selectbox("Player 1 (Transfer Out)", players, index=players.index("Mohamed Salah") if "Mohamed Salah" in players else 0, key="transfer_p1")
+with t_col2:
+    p2_name = st.selectbox("Player 2 (Transfer In)", players, index=players.index("Bukayo Saka") if "Bukayo Saka" in players else 1, key="transfer_p2")
+
+transfer_gw = st.selectbox("Gameweek for Comparison", sorted(df['GW'].unique()), key="transfer_gw")
+
+if st.button("🔄 Compare Players"):
+    from src.features.player_lookup import get_player_stats
+    
+    p1_stats = get_player_stats(df, p1_name, transfer_gw)
+    p2_stats = get_player_stats(df, p2_name, transfer_gw)
+    
+    if not p1_stats or not p2_stats:
+        st.error("Could not find data for one or both players in the selected Gameweek.")
+    else:
+        s_col1, s_col2 = st.columns(2)
+        with s_col1:
+            st.markdown(f"**{p1_stats['name']}** ({p1_stats['team']} - {p1_stats['position']})")
+            st.metric("Price", f"£{p1_stats['price']:.1f}m")
+            st.metric("Predicted Points", f"{p1_stats['predicted_points']:.2f}")
+            st.metric("Form (Avg L3)", f"{p1_stats['form']:.2f}")
+        with s_col2:
+            st.markdown(f"**{p2_stats['name']}** ({p2_stats['team']} - {p2_stats['position']})")
+            st.metric("Price", f"£{p2_stats['price']:.1f}m")
+            st.metric("Predicted Points", f"{p2_stats['predicted_points']:.2f}")
+            st.metric("Form (Avg L3)", f"{p2_stats['form']:.2f}")
+            
+        with st.spinner("Asking the Gaffer..."):
+            verdict = assistant.compare_players(p1_stats, p2_stats)
+            st.info(verdict)
+
+# ----------------------------------------------------------------------------
 # Dream Team — budget-constrained optimal squad for a gameweek
 # ----------------------------------------------------------------------------
 st.markdown("---")

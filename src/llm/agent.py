@@ -92,6 +92,30 @@ class FPLAssistant:
         except Exception as e:
             return f"LLM API Error: {str(e)}"
 
+    def compare_players(self, player1: dict, player2: dict) -> str:
+        """Query the LLM for a transfer comparison between two players."""
+        try:
+            from .prompts import TRANSFER_SYSTEM_PROMPT, transfer_user_prompt
+        except ImportError:
+            from prompts import TRANSFER_SYSTEM_PROMPT, transfer_user_prompt
+
+        user_prompt = transfer_user_prompt(player1, player2)
+
+        print(f"Querying {self.model_name} for transfer comparison...")
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model_name,
+                messages=[
+                    {"role": "system", "content": TRANSFER_SYSTEM_PROMPT},
+                    {"role": "user", "content": user_prompt},
+                ],
+                temperature=0.6,
+                max_tokens=260,
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            return f"LLM API Error: {str(e)}"
+
 
 if __name__ == "__main__":
     assistant = FPLAssistant()
